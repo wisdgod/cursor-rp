@@ -6,15 +6,17 @@
 Local reverse proxy tool. The concise introduction is intentional.
 
 ## Installation
-1. Visit https://github.com/[NAME]/cursor-rp/releases to download dbwriter, modifier, and ccursor
+1. Visit https://github.com/wisdgod/cursor-rp/releases to download dbwriter, modifier, and ccursor
 2. Rename them to standard names and place them in the same directory
 
 ## Configuration and Usage
 
 ### 1. Account Management (dbwriter)
-dbwriter is an account management tool for quickly switching Cursor account information. It supports direct application, account pool management, and other modes.
+
+dbwriter is an account management tool for quickly switching Cursor account information. It supports direct application, account pool management, current account import, and other modes.
 
 #### Basic Usage
+
 ```bash
 # Direct application (without saving)
 dbwriter apply -a <TOKEN> -m pro -s google
@@ -22,72 +24,178 @@ dbwriter apply -a <ACCESS_TOKEN> -r <REFRESH_TOKEN> -e user@example.com -m pro_p
 
 # Save account to pool
 dbwriter save -a <TOKEN> -e user@example.com -m pro -s google
-dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply  # Save and apply immediately
+dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply
 
 # Switch account from pool
-dbwriter use -e user@example.com              # Select by email
-dbwriter use -m pro                           # Select Pro account (first one if multiple)
-dbwriter use --interactive                    # Interactive selection
+dbwriter use -e user@example.com
+dbwriter use -m pro
+dbwriter use -m pro --interactive
+dbwriter use --interactive
+
+# View current Cursor account
+dbwriter cursor show
+dbwriter cursor import
 
 # View account pool
-dbwriter list                                 # List all accounts
-dbwriter list -m pro                          # List specific membership type
-dbwriter list --verbose                       # Show detailed info (including token preview)
+dbwriter list
+dbwriter list -m pro
+dbwriter list --verbose
 
 # Manage account pool
-dbwriter manage remove user@example.com       # Remove account
-dbwriter manage disable user@example.com      # Disable account (soft delete)
-dbwriter manage stats                         # Show statistics
+dbwriter manage remove user@example.com
+dbwriter manage disable user@example.com
+dbwriter manage stats
+
+# Global quiet mode
+dbwriter -q list
+dbwriter --quiet cursor import
 ```
 
 #### Command Parameters
 
 **Global Parameters**
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `--pool-db` | Account pool database path | `./accounts.db` |
 
-**Subcommand: apply (direct application)**
-| Parameter | Short | Description | Required |
-|-----------|-------|-------------|----------|
-| `--access-token` | `-a` | Access Token | ✅ |
-| `--refresh-token` | `-r` | Refresh Token (defaults to same as access) | ❌ |
-| `--email` | `-e` | Account email | ❌ |
-| `--membership` | `-m` | Membership type | ✅ |
-| `--signup-type` | `-s` | Registration method | ✅ |
+| Parameter | Short | Description | Default |
+|-----------|-------|-------------|---------|
+| `--pool-db` | | Account pool database path | `./accounts.db` |
+| `--quiet` | `-q` | Quiet mode (reduce output) | - |
 
-**Subcommand: save (save to account pool)**
+**Subcommand: apply** (direct application without saving)
+
 | Parameter | Short | Description | Required |
 |-----------|-------|-------------|----------|
 | `--access-token` | `-a` | Access Token | ✅ |
 | `--refresh-token` | `-r` | Refresh Token | ❌ |
-| `--email` | `-e` | Account email (recommended) | ❌ |
+| `--email` | `-e` | Account email | ❌ |
 | `--membership` | `-m` | Membership type | ✅ |
 | `--signup-type` | `-s` | Registration method | ✅ |
-| `--apply` |  | Apply immediately after saving | ❌ |
 
-**Subcommand: use (use from account pool)**
-| Parameter | Short | Description | Mutually Exclusive |
-|-----------|-------|-------------|-------------------|
-| `--email` | `-e` | Select by email | With `-m` |
-| `--membership` | `-m` | Select by membership type | With `-e` |
-| `--interactive` | `-i` | Interactive selection | ❌ |
+**Subcommand: save** (save to account pool)
+
+| Parameter | Short | Description | Required |
+|-----------|-------|-------------|----------|
+| `--access-token` | `-a` | Access Token | ✅ |
+| `--refresh-token` | `-r` | Refresh Token | ❌ |
+| `--email` | `-e` | Account email | ❌ |
+| `--membership` | `-m` | Membership type | ✅ |
+| `--signup-type` | `-s` | Registration method | ✅ |
+| `--apply` | | Apply immediately after saving | ❌ |
+
+**Subcommand: use** (select and apply from account pool)
+
+| Parameter | Short | Description | Notes |
+|-----------|-------|-------------|-------|
+| `--email` | `-e` | Select by email | Mutually exclusive with `-m` |
+| `--membership` | `-m` | Select by membership type | Mutually exclusive with `-e` |
+| `--interactive` | `-i` | Interactive selection | - |
+
+**Subcommand: cursor** (current account operations)
+
+| Subcommand | Description |
+|------------|-------------|
+| `show` | Display current Cursor account information |
+| `import` | Import current account to account pool |
+
+**Subcommand: list** (view account pool)
+
+| Parameter | Short | Description |
+|-----------|-------|-------------|
+| `--membership` | `-m` | Filter by membership type |
+| `--verbose` | `-v` | Show detailed information |
+
+**Subcommand: manage** (account pool management)
+
+| Subcommand | Description |
+|------------|-------------|
+| `remove <EMAIL>` | Remove account |
+| `disable <EMAIL>` | Disable account |
+| `stats` | Show statistics |
 
 **Supported Type Values**
+
 - **Membership types**: `free`, `pro`, `pro_plus`, `enterprise`, `free_trial`, `ultra`
 - **Registration methods**: `unknown`, `auth0`, `google`, `github`
 
 #### Usage Scenarios
-1. **Temporary switching**: Use `apply` command to directly apply an account without saving locally
-2. **Account collection**: Use `save` command to build an account pool for easy management of multiple accounts
-3. **Quick switching**: Use `use` command to quickly switch between saved accounts
-4. **Batch management**: Manage all account information through the account pool
+
+**Scenario 1: First Time Use - Import Existing Account**
+
+```bash
+# 1. Login normally in Cursor
+# 2. Import current account to account pool
+dbwriter cursor import
+
+# 3. View account pool
+dbwriter list
+```
+
+**Scenario 2: Add Multiple Accounts**
+
+```bash
+# Method 1: Manual addition
+dbwriter save -a <TOKEN1> -e work@company.com -m enterprise -s auth0
+dbwriter save -a <TOKEN2> -e personal@gmail.com -m pro -s google
+
+# Method 2: Switch login in Cursor, then import
+dbwriter cursor import  # Execute after logging in account 1
+# Switch to account 2 in Cursor
+dbwriter cursor import  # Execute after logging in account 2
+```
+
+**Scenario 3: Quick Account Switching**
+
+```bash
+# Switch by email
+dbwriter use -e work@company.com
+
+# Switch by membership type
+dbwriter use -m pro
+
+# Interactive selection
+dbwriter use --interactive
+```
+
+**Scenario 4: View Current Account**
+
+```bash
+dbwriter cursor show
+```
+
+**Scenario 5: Temporary Account Usage (without saving)**
+
+```bash
+dbwriter apply -a <TOKEN> -m pro -s google
+```
+
+**Scenario 6: Use in Scripts**
+
+```bash
+# Quiet mode, reduce output
+dbwriter -q use -e user@example.com
+```
 
 #### Notes
-- Token supports two modes: identical access/refresh tokens, or different tokens
-- Account pool database is saved in `./accounts.db` by default, can be specified via `--pool-db`
-- It's recommended to set an email for each account for easier identification and management
-- When using `--verbose` to view detailed information, only the first 20 characters of tokens are displayed
+
+- **Close Cursor** before modifying accounts
+- It's recommended to set an email for each account for easier management
+- Tokens can be identical (only provide `-a`) or different (provide both `-a` and `-r`)
+- Accounts without email are displayed as `<No Email>` in list
+- Cannot use `--quiet` together with `--interactive`
+- Accounts with the same email are automatically updated (no duplicates)
+
+#### Quick Reference
+
+```bash
+# Common commands quick reference
+dbwriter cursor import             # Import current account
+dbwriter use -e <EMAIL>            # Switch account
+dbwriter list                      # View all accounts
+dbwriter cursor show               # View current account
+
+# Account pool management
+dbwriter manage stats              # View statistics
+dbwriter manage remove <EMAIL>     # Remove account
+```
 
 ### 2. Patching Cursor (modifier)
 Close Cursor, apply patch (needs to be re-run after each update):
@@ -164,6 +272,7 @@ In `config.toml`, comment out or delete unknown parameters, **DO NOT leave them 
 | `port` | Service listening port | u16 | ✅ | - | All versions |
 | `dns-resolver` | DNS resolver (gai/hickory) | string | ❌ | "gai" | 0.2.0+ |
 | `lock-updates` | Lock updates | bool | ✅ | false | All versions |
+| `passthrough-unmatched` | Pass through unmatched requests | bool | ✅ | false | 0.3.3+ |
 | `fake-email` | Fake email configuration | object | ❌ | {email="", sign-up-type="unknown", enable=false} | 0.2.0+ |
 | `service-addr` | Service address configuration | object | ❌ | {scheme="http", suffix="", port=0} | 0.2.0+ |
 | ~~`proxy`~~ | ~~Proxy configuration~~ | ~~string~~ | ❌ | - | 0.2.0-0.2.x, deprecated, migrate to `proxies._` |
@@ -217,9 +326,13 @@ In `config.toml`, comment out or delete unknown parameters, **DO NOT leave them 
 
 ## Internal Interfaces
 
-### ConfigUpdate
-**Function**: Trigger service reload after configuration file update
 **Limitation**: Cannot be triggered via domain access, needs external access with custom reverse proxy
+
+### ConfigUpdate
+**Function**: Trigger service reload after configuration file update, some configurations require server restart
+
+### CppCount
+**Function**: Simple counter for StreamCpp successful requests and successful responses
 
 ---
 

@@ -6,15 +6,17 @@
 Proxy inverso local. La introducción es concisa, intencionalmente.
 
 ## Instalación
-1. Visite https://github.com/[NAME]/cursor-rp/releases para descargar dbwriter, modifier y ccursor
+1. Visite https://github.com/wisdgod/cursor-rp/releases para descargar dbwriter, modifier y ccursor
 2. Renómbrelos a nombres estándar y colóquelos en el mismo directorio
 
 ## Configuración y uso
 
 ### 1. Administración de cuentas (dbwriter)
-dbwriter es una herramienta de administración de cuentas para cambiar rápidamente la información de cuenta de Cursor. Admite aplicación directa, administración de grupo de cuentas y otros modos.
+
+dbwriter es una herramienta de administración de cuentas para cambiar rápidamente la información de cuenta de Cursor. Admite aplicación directa, administración de grupo de cuentas, importación de cuenta actual y otros modos.
 
 #### Uso básico
+
 ```bash
 # Aplicación directa (sin guardar)
 dbwriter apply -a <TOKEN> -m pro -s google
@@ -22,72 +24,178 @@ dbwriter apply -a <ACCESS_TOKEN> -r <REFRESH_TOKEN> -e user@example.com -m pro_p
 
 # Guardar cuenta en el grupo
 dbwriter save -a <TOKEN> -e user@example.com -m pro -s google
-dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply  # Guardar y aplicar inmediatamente
+dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply
 
 # Cambiar cuenta desde el grupo
-dbwriter use -e user@example.com              # Seleccionar por email
-dbwriter use -m pro                           # Seleccionar cuenta Pro (la primera si hay varias)
-dbwriter use --interactive                    # Selección interactiva
+dbwriter use -e user@example.com
+dbwriter use -m pro
+dbwriter use -m pro --interactive
+dbwriter use --interactive
+
+# Ver cuenta Cursor actual
+dbwriter cursor show
+dbwriter cursor import
 
 # Ver grupo de cuentas
-dbwriter list                                 # Listar todas las cuentas
-dbwriter list -m pro                          # Listar tipo de membresía específico
-dbwriter list --verbose                       # Mostrar información detallada (incluyendo vista previa del token)
+dbwriter list
+dbwriter list -m pro
+dbwriter list --verbose
 
 # Administrar grupo de cuentas
-dbwriter manage remove user@example.com       # Eliminar cuenta
-dbwriter manage disable user@example.com      # Desactivar cuenta (eliminación suave)
-dbwriter manage stats                         # Mostrar estadísticas
+dbwriter manage remove user@example.com
+dbwriter manage disable user@example.com
+dbwriter manage stats
+
+# Modo silencioso global
+dbwriter -q list
+dbwriter --quiet cursor import
 ```
 
 #### Descripción de parámetros de comando
 
 **Parámetros globales**
-| Parámetro | Descripción | Por defecto |
-|-----------|-------------|-------------|
-| `--pool-db` | Ruta de la base de datos del grupo de cuentas | `./accounts.db` |
 
-**Subcomando: apply (aplicación directa)**
-| Parámetro | Abreviatura | Descripción | Requerido |
-|-----------|-------------|-------------|-----------|
-| `--access-token` | `-a` | Token de acceso | ✅ |
-| `--refresh-token` | `-r` | Token de actualización (por defecto igual que access) | ❌ |
-| `--email` | `-e` | Email de la cuenta | ❌ |
-| `--membership` | `-m` | Tipo de membresía | ✅ |
-| `--signup-type` | `-s` | Método de registro | ✅ |
+| Parámetro | Abreviatura | Descripción | Por defecto |
+|-----------|-------------|-------------|-------------|
+| `--pool-db` | | Ruta de la base de datos del grupo de cuentas | `./accounts.db` |
+| `--quiet` | `-q` | Modo silencioso (reducir salida) | - |
 
-**Subcomando: save (guardar en grupo de cuentas)**
+**Subcomando: apply** (aplicación directa sin guardar)
+
 | Parámetro | Abreviatura | Descripción | Requerido |
 |-----------|-------------|-------------|-----------|
 | `--access-token` | `-a` | Token de acceso | ✅ |
 | `--refresh-token` | `-r` | Token de actualización | ❌ |
-| `--email` | `-e` | Email de la cuenta (recomendado) | ❌ |
+| `--email` | `-e` | Email de la cuenta | ❌ |
 | `--membership` | `-m` | Tipo de membresía | ✅ |
 | `--signup-type` | `-s` | Método de registro | ✅ |
-| `--apply` |  | Aplicar inmediatamente después de guardar | ❌ |
 
-**Subcomando: use (usar desde grupo de cuentas)**
-| Parámetro | Abreviatura | Descripción | Mutuamente excluyente |
-|-----------|-------------|-------------|----------------------|
-| `--email` | `-e` | Seleccionar por email | Con `-m` |
-| `--membership` | `-m` | Seleccionar por tipo de membresía | Con `-e` |
-| `--interactive` | `-i` | Selección interactiva | ❌ |
+**Subcomando: save** (guardar en grupo de cuentas)
+
+| Parámetro | Abreviatura | Descripción | Requerido |
+|-----------|-------------|-------------|-----------|
+| `--access-token` | `-a` | Token de acceso | ✅ |
+| `--refresh-token` | `-r` | Token de actualización | ❌ |
+| `--email` | `-e` | Email de la cuenta | ❌ |
+| `--membership` | `-m` | Tipo de membresía | ✅ |
+| `--signup-type` | `-s` | Método de registro | ✅ |
+| `--apply` | | Aplicar inmediatamente después de guardar | ❌ |
+
+**Subcomando: use** (seleccionar y aplicar desde grupo de cuentas)
+
+| Parámetro | Abreviatura | Descripción | Notas |
+|-----------|-------------|-------------|-------|
+| `--email` | `-e` | Seleccionar por email | Mutuamente excluyente con `-m` |
+| `--membership` | `-m` | Seleccionar por tipo de membresía | Mutuamente excluyente con `-e` |
+| `--interactive` | `-i` | Selección interactiva | - |
+
+**Subcomando: cursor** (operaciones de cuenta actual)
+
+| Subcomando | Descripción |
+|------------|-------------|
+| `show` | Mostrar información de cuenta Cursor actual |
+| `import` | Importar cuenta actual al grupo de cuentas |
+
+**Subcomando: list** (ver grupo de cuentas)
+
+| Parámetro | Abreviatura | Descripción |
+|-----------|-------------|-------------|
+| `--membership` | `-m` | Filtrar por tipo de membresía |
+| `--verbose` | `-v` | Mostrar información detallada |
+
+**Subcomando: manage** (administración de grupo de cuentas)
+
+| Subcomando | Descripción |
+|------------|-------------|
+| `remove <EMAIL>` | Eliminar cuenta |
+| `disable <EMAIL>` | Desactivar cuenta |
+| `stats` | Mostrar estadísticas |
 
 **Tipos de valores admitidos**
+
 - **Tipos de membresía**: `free`, `pro`, `pro_plus`, `enterprise`, `free_trial`, `ultra`
 - **Métodos de registro**: `unknown`, `auth0`, `google`, `github`
 
 #### Escenarios de uso
-1. **Cambio temporal**: Use el comando `apply` para aplicar directamente una cuenta sin guardarla localmente
-2. **Colección de cuentas**: Use el comando `save` para crear un grupo de cuentas facilitando la gestión de múltiples cuentas
-3. **Cambio rápido**: Use el comando `use` para cambiar rápidamente entre cuentas guardadas
-4. **Gestión por lotes**: Administre toda la información de cuentas a través del grupo de cuentas
+
+**Escenario 1: Primer uso - Importar cuenta existente**
+
+```bash
+# 1. Inicie sesión normalmente en Cursor
+# 2. Importe la cuenta actual al grupo de cuentas
+dbwriter cursor import
+
+# 3. Vea el grupo de cuentas
+dbwriter list
+```
+
+**Escenario 2: Agregar múltiples cuentas**
+
+```bash
+# Método 1: Adición manual
+dbwriter save -a <TOKEN1> -e work@company.com -m enterprise -s auth0
+dbwriter save -a <TOKEN2> -e personal@gmail.com -m pro -s google
+
+# Método 2: Cambiar inicio de sesión en Cursor, luego importar
+dbwriter cursor import  # Ejecutar después de iniciar sesión en cuenta 1
+# Cambiar a cuenta 2 en Cursor
+dbwriter cursor import  # Ejecutar después de iniciar sesión en cuenta 2
+```
+
+**Escenario 3: Cambio rápido de cuenta**
+
+```bash
+# Cambiar por email
+dbwriter use -e work@company.com
+
+# Cambiar por tipo de membresía
+dbwriter use -m pro
+
+# Selección interactiva
+dbwriter use --interactive
+```
+
+**Escenario 4: Ver cuenta actual**
+
+```bash
+dbwriter cursor show
+```
+
+**Escenario 5: Uso temporal de cuenta (sin guardar)**
+
+```bash
+dbwriter apply -a <TOKEN> -m pro -s google
+```
+
+**Escenario 6: Uso en scripts**
+
+```bash
+# Modo silencioso, reducir salida
+dbwriter -q use -e user@example.com
+```
 
 #### Notas
-- El token admite dos modos: tokens de acceso/actualización idénticos, o tokens diferentes
-- La base de datos del grupo de cuentas se guarda por defecto en `./accounts.db`, puede especificarse mediante `--pool-db`
-- Se recomienda establecer un email para cada cuenta para facilitar la identificación y gestión
-- Al usar `--verbose` para ver información detallada, solo se muestran los primeros 20 caracteres de los tokens
+
+- **Cierre Cursor** antes de modificar cuentas
+- Se recomienda establecer un email para cada cuenta para facilitar la gestión
+- Los tokens pueden ser idénticos (solo proporcionar `-a`) o diferentes (proporcionar tanto `-a` como `-r`)
+- Las cuentas sin email se muestran como `<Sin Email>` en la lista
+- No se puede usar `--quiet` junto con `--interactive`
+- Las cuentas con el mismo email se actualizan automáticamente (sin duplicados)
+
+#### Referencia rápida
+
+```bash
+# Referencia rápida de comandos comunes
+dbwriter cursor import             # Importar cuenta actual
+dbwriter use -e <EMAIL>            # Cambiar cuenta
+dbwriter list                      # Ver todas las cuentas
+dbwriter cursor show               # Ver cuenta actual
+
+# Administración de grupo de cuentas
+dbwriter manage stats              # Ver estadísticas
+dbwriter manage remove <EMAIL>     # Eliminar cuenta
+```
 
 ### 2. Parchear Cursor (modifier)
 Cierre Cursor, aplique el parche (debe volver a ejecutarse después de cada actualización):
@@ -164,6 +272,7 @@ En `config.toml`, comente o elimine los parámetros desconocidos, **NO los deje 
 | `port` | Puerto de escucha del servicio | u16 | ✅ | - | Todas las versiones |
 | `dns-resolver` | Resolvedor DNS (gai/hickory) | string | ❌ | "gai" | 0.2.0+ |
 | `lock-updates` | Bloquear actualizaciones | bool | ✅ | false | Todas las versiones |
+| `passthrough-unmatched` | Pasar solicitudes no coincidentes | bool | ✅ | false | 0.3.3+ |
 | `fake-email` | Configuración de correo electrónico falso | object | ❌ | {email="", sign-up-type="unknown", enable=false} | 0.2.0+ |
 | `service-addr` | Configuración de dirección de servicio | object | ❌ | {scheme="http", suffix="", port=0} | 0.2.0+ |
 | ~~`proxy`~~ | ~~Configuración del servidor proxy~~ | ~~string~~ | ❌ | - | 0.2.0-0.2.x, obsoleto, migrar a `proxies._` |
@@ -217,9 +326,13 @@ En `config.toml`, comente o elimine los parámetros desconocidos, **NO los deje 
 
 ## Interfaces internas
 
-### ConfigUpdate
-**Función**: Activar recarga del servicio después de actualizar el archivo de configuración
 **Limitación**: No se puede activar a través de acceso por dominio, requiere acceso externo con proxy inverso personalizado
+
+### ConfigUpdate
+**Función**: Activar recarga del servicio después de actualizar el archivo de configuración, algunas configuraciones requieren reinicio del servidor
+
+### CppCount
+**Función**: Contador simple para solicitudes StreamCpp exitosas y respuestas exitosas
 
 ---
 

@@ -6,15 +6,17 @@
 Proxy inverse local. L'introduction est concise, intentionnellement.
 
 ## Installation
-1. Visitez https://github.com/[NAME]/cursor-rp/releases pour télécharger dbwriter, modifier et ccursor
+1. Visitez https://github.com/wisdgod/cursor-rp/releases pour télécharger dbwriter, modifier et ccursor
 2. Renommez-les aux noms standards et placez-les dans le même répertoire
 
 ## Configuration et utilisation
 
 ### 1. Gestion des comptes (dbwriter)
-dbwriter est un outil de gestion de comptes pour changer rapidement les informations de compte Cursor. Il prend en charge l'application directe, la gestion d'un pool de comptes et d'autres modes.
+
+dbwriter est un outil de gestion de comptes pour changer rapidement les informations de compte Cursor. Il prend en charge l'application directe, la gestion d'un pool de comptes, l'importation du compte actuel et d'autres modes.
 
 #### Utilisation basique
+
 ```bash
 # Application directe (sans sauvegarde)
 dbwriter apply -a <TOKEN> -m pro -s google
@@ -22,72 +24,178 @@ dbwriter apply -a <ACCESS_TOKEN> -r <REFRESH_TOKEN> -e user@example.com -m pro_p
 
 # Sauvegarder un compte dans le pool
 dbwriter save -a <TOKEN> -e user@example.com -m pro -s google
-dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply  # Sauvegarder et appliquer immédiatement
+dbwriter save -a <TOKEN> -e user@example.com -m free_trial -s github --apply
 
 # Changer de compte depuis le pool
-dbwriter use -e user@example.com              # Sélection par email
-dbwriter use -m pro                           # Sélectionner un compte Pro (le premier si plusieurs)
-dbwriter use --interactive                    # Sélection interactive
+dbwriter use -e user@example.com
+dbwriter use -m pro
+dbwriter use -m pro --interactive
+dbwriter use --interactive
+
+# Consulter le compte Cursor actuel
+dbwriter cursor show
+dbwriter cursor import
 
 # Consulter le pool de comptes
-dbwriter list                                 # Lister tous les comptes
-dbwriter list -m pro                          # Lister un type d'abonnement spécifique
-dbwriter list --verbose                       # Afficher des informations détaillées (y compris un aperçu du jeton)
+dbwriter list
+dbwriter list -m pro
+dbwriter list --verbose
 
 # Gérer le pool de comptes
-dbwriter manage remove user@example.com       # Supprimer un compte
-dbwriter manage disable user@example.com      # Désactiver un compte (suppression douce)
-dbwriter manage stats                         # Afficher les statistiques
+dbwriter manage remove user@example.com
+dbwriter manage disable user@example.com
+dbwriter manage stats
+
+# Mode silencieux global
+dbwriter -q list
+dbwriter --quiet cursor import
 ```
 
 #### Description des paramètres de commande
 
 **Paramètres globaux**
-| Paramètre | Description | Par défaut |
-|-----------|-------------|------------|
-| `--pool-db` | Chemin de la base de données du pool de comptes | `./accounts.db` |
 
-**Sous-commande : apply (application directe)**
-| Paramètre | Abréviation | Description | Requis |
-|-----------|-------------|-------------|--------|
-| `--access-token` | `-a` | Jeton d'accès | ✅ |
-| `--refresh-token` | `-r` | Jeton de rafraîchissement (par défaut identique à l'access) | ❌ |
-| `--email` | `-e` | Email du compte | ❌ |
-| `--membership` | `-m` | Type d'abonnement | ✅ |
-| `--signup-type` | `-s` | Méthode d'inscription | ✅ |
+| Paramètre | Abréviation | Description | Par défaut |
+|-----------|-------------|-------------|------------|
+| `--pool-db` | | Chemin de la base de données du pool de comptes | `./accounts.db` |
+| `--quiet` | `-q` | Mode silencieux (réduire la sortie) | - |
 
-**Sous-commande : save (sauvegarde dans le pool de comptes)**
+**Sous-commande : apply** (application directe sans sauvegarde)
+
 | Paramètre | Abréviation | Description | Requis |
 |-----------|-------------|-------------|--------|
 | `--access-token` | `-a` | Jeton d'accès | ✅ |
 | `--refresh-token` | `-r` | Jeton de rafraîchissement | ❌ |
-| `--email` | `-e` | Email du compte (recommandé) | ❌ |
+| `--email` | `-e` | Email du compte | ❌ |
 | `--membership` | `-m` | Type d'abonnement | ✅ |
 | `--signup-type` | `-s` | Méthode d'inscription | ✅ |
-| `--apply` |  | Appliquer immédiatement après la sauvegarde | ❌ |
 
-**Sous-commande : use (utilisation depuis le pool de comptes)**
-| Paramètre | Abréviation | Description | Mutuellement exclusif |
-|-----------|-------------|-------------|----------------------|
-| `--email` | `-e` | Sélection par email | Avec `-m` |
-| `--membership` | `-m` | Sélection par type d'abonnement | Avec `-e` |
-| `--interactive` | `-i` | Sélection interactive | ❌ |
+**Sous-commande : save** (sauvegarde dans le pool de comptes)
+
+| Paramètre | Abréviation | Description | Requis |
+|-----------|-------------|-------------|--------|
+| `--access-token` | `-a` | Jeton d'accès | ✅ |
+| `--refresh-token` | `-r` | Jeton de rafraîchissement | ❌ |
+| `--email` | `-e` | Email du compte | ❌ |
+| `--membership` | `-m` | Type d'abonnement | ✅ |
+| `--signup-type` | `-s` | Méthode d'inscription | ✅ |
+| `--apply` | | Appliquer immédiatement après la sauvegarde | ❌ |
+
+**Sous-commande : use** (sélection et application depuis le pool de comptes)
+
+| Paramètre | Abréviation | Description | Remarques |
+|-----------|-------------|-------------|-----------|
+| `--email` | `-e` | Sélection par email | Mutuellement exclusif avec `-m` |
+| `--membership` | `-m` | Sélection par type d'abonnement | Mutuellement exclusif avec `-e` |
+| `--interactive` | `-i` | Sélection interactive | - |
+
+**Sous-commande : cursor** (opérations sur le compte actuel)
+
+| Sous-commande | Description |
+|---------------|-------------|
+| `show` | Afficher les informations du compte Cursor actuel |
+| `import` | Importer le compte actuel dans le pool de comptes |
+
+**Sous-commande : list** (consulter le pool de comptes)
+
+| Paramètre | Abréviation | Description |
+|-----------|-------------|-------------|
+| `--membership` | `-m` | Filtrer par type d'abonnement |
+| `--verbose` | `-v` | Afficher des informations détaillées |
+
+**Sous-commande : manage** (gestion du pool de comptes)
+
+| Sous-commande | Description |
+|---------------|-------------|
+| `remove <EMAIL>` | Supprimer un compte |
+| `disable <EMAIL>` | Désactiver un compte |
+| `stats` | Afficher les statistiques |
 
 **Types de valeurs supportés**
+
 - **Types d'abonnement** : `free`, `pro`, `pro_plus`, `enterprise`, `free_trial`, `ultra`
 - **Méthodes d'inscription** : `unknown`, `auth0`, `google`, `github`
 
 #### Scénarios d'utilisation
-1. **Changement temporaire** : Utilisez la commande `apply` pour appliquer directement un compte sans le sauvegarder localement
-2. **Collection de comptes** : Utilisez la commande `save` pour créer un pool de comptes facilitant la gestion de plusieurs comptes
-3. **Changement rapide** : Utilisez la commande `use` pour basculer rapidement entre les comptes sauvegardés
-4. **Gestion par lots** : Gérez toutes les informations de compte via le pool de comptes
+
+**Scénario 1 : Première utilisation - Importer un compte existant**
+
+```bash
+# 1. Connectez-vous normalement dans Cursor
+# 2. Importez le compte actuel dans le pool de comptes
+dbwriter cursor import
+
+# 3. Consultez le pool de comptes
+dbwriter list
+```
+
+**Scénario 2 : Ajouter plusieurs comptes**
+
+```bash
+# Méthode 1 : Ajout manuel
+dbwriter save -a <TOKEN1> -e work@company.com -m enterprise -s auth0
+dbwriter save -a <TOKEN2> -e personal@gmail.com -m pro -s google
+
+# Méthode 2 : Changer de connexion dans Cursor, puis importer
+dbwriter cursor import  # Exécuter après connexion au compte 1
+# Passer au compte 2 dans Cursor
+dbwriter cursor import  # Exécuter après connexion au compte 2
+```
+
+**Scénario 3 : Changement rapide de compte**
+
+```bash
+# Changer par email
+dbwriter use -e work@company.com
+
+# Changer par type d'abonnement
+dbwriter use -m pro
+
+# Sélection interactive
+dbwriter use --interactive
+```
+
+**Scénario 4 : Consulter le compte actuel**
+
+```bash
+dbwriter cursor show
+```
+
+**Scénario 5 : Utilisation temporaire d'un compte (sans sauvegarde)**
+
+```bash
+dbwriter apply -a <TOKEN> -m pro -s google
+```
+
+**Scénario 6 : Utilisation dans des scripts**
+
+```bash
+# Mode silencieux, réduire la sortie
+dbwriter -q use -e user@example.com
+```
 
 #### Remarques
-- Le jeton supporte deux modes : jetons d'accès/rafraîchissement identiques, ou jetons différents
-- La base de données du pool de comptes est sauvegardée par défaut dans `./accounts.db`, peut être spécifiée via `--pool-db`
-- Il est recommandé de définir un email pour chaque compte pour faciliter l'identification et la gestion
-- Lors de l'utilisation de `--verbose` pour voir des informations détaillées, seuls les 20 premiers caractères des jetons sont affichés
+
+- **Fermez Cursor** avant de modifier les comptes
+- Il est recommandé de définir un email pour chaque compte pour faciliter la gestion
+- Les jetons peuvent être identiques (fournir uniquement `-a`) ou différents (fournir à la fois `-a` et `-r`)
+- Les comptes sans email sont affichés comme `<Sans Email>` dans la liste
+- Impossible d'utiliser `--quiet` avec `--interactive`
+- Les comptes avec le même email sont automatiquement mis à jour (pas de doublons)
+
+#### Référence rapide
+
+```bash
+# Référence rapide des commandes courantes
+dbwriter cursor import             # Importer le compte actuel
+dbwriter use -e <EMAIL>            # Changer de compte
+dbwriter list                      # Consulter tous les comptes
+dbwriter cursor show               # Consulter le compte actuel
+
+# Gestion du pool de comptes
+dbwriter manage stats              # Consulter les statistiques
+dbwriter manage remove <EMAIL>     # Supprimer un compte
+```
 
 ### 2. Patcher Cursor (modifier)
 Fermez Cursor, appliquez le patch (à réexécuter après chaque mise à jour) :
@@ -164,6 +272,7 @@ Dans `config.toml`, commentez ou supprimez les paramètres inconnus, **NE les la
 | `port` | Port d'écoute du service | u16 | ✅ | - | Toutes versions |
 | `dns-resolver` | Résolveur DNS (gai/hickory) | string | ❌ | "gai" | 0.2.0+ |
 | `lock-updates` | Verrouiller les mises à jour | bool | ✅ | false | Toutes versions |
+| `passthrough-unmatched` | Passer les requêtes non correspondantes | bool | ✅ | false | 0.3.3+ |
 | `fake-email` | Configuration d'e-mail fictif | object | ❌ | {email="", sign-up-type="unknown", enable=false} | 0.2.0+ |
 | `service-addr` | Configuration d'adresse de service | object | ❌ | {scheme="http", suffix="", port=0} | 0.2.0+ |
 | ~~`proxy`~~ | ~~Configuration du serveur proxy~~ | ~~string~~ | ❌ | - | 0.2.0-0.2.x, déprécié, migré vers `proxies._` |
@@ -217,9 +326,13 @@ Dans `config.toml`, commentez ou supprimez les paramètres inconnus, **NE les la
 
 ## Interfaces internes
 
-### ConfigUpdate
-**Fonction** : Déclencher le rechargement du service après la mise à jour du fichier de configuration
 **Limitation** : Ne peut pas être déclenché via l'accès par domaine, nécessite un accès externe avec un proxy inverse personnalisé
+
+### ConfigUpdate
+**Fonction** : Déclencher le rechargement du service après la mise à jour du fichier de configuration, certaines configurations nécessitent un redémarrage du serveur
+
+### CppCount
+**Fonction** : Compteur simple pour les requêtes StreamCpp réussies et les réponses réussies
 
 ---
 
