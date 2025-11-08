@@ -1,5 +1,11 @@
 # cursor-rp
 
+> **⚠️ تم أرشفة المشروع | Project Archived**
+>
+> لم يعد هذا المشروع قيد الصيانة. النسخة النهائية هي v0.3.4 (2025-11-08). شكراً لاهتمامك ودعمك.
+>
+> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+
 [简体中文](README.md) | [English](README.en.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [Español](README.es.md)
 
 ## مقدمة

@@ -1,5 +1,11 @@
 # cursor-rp
 
+> **⚠️ Proyecto archivado | Project Archived**
+>
+> Este proyecto ya no se mantiene. La versión final es v0.3.4 (2025-11-08). Gracias por su atención y apoyo.
+>
+> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+
 [简体中文](README.md) | [English](README.en.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [العربية](README.ar.md)
 
 ## Introducción
