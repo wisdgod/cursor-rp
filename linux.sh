@@ -17,6 +17,9 @@ PORT=""
 SKIP_HOSTS=false
 SUDO="sudo "
 SUFFIX=".local"
+DOMAIN=""
+WEBSITE_URL=""
+WEBSITE_URL_SET=false
 TEMP_DIR="/tmp/cursor-$(date +%s)"
 
 # 检测系统语言，优先判断中文
@@ -66,6 +69,8 @@ show_help() {
   -a, --appimage <PATH>   指定 AppImage 路径
   -p, --port <PORT>       指定端口号 (可选，默认由 modifier 处理)
   -s, --suffix <SUFFIX>   指定域名后缀 (默认: .local)
+  -d, --domain <DOMAIN>   替换域名（与 --suffix 互斥）
+  --website-url [URL]     自定义登录 URL（可选值）
   --skip-hosts            跳过 hosts 文件修改
   --debug                 启用调试输出
 
@@ -82,6 +87,9 @@ show_help() {
   # 指定端口和后缀
   $0 -a /path/to/cursor.appimage -p 443 -s .example.com
 
+  # 使用域名替换
+  $0 -a /path/to/cursor.appimage -d example.com
+
   # 跳过 hosts 修改（手动管理域名解析）
   $0 -a /path/to/cursor.appimage --skip-hosts
 EOF
@@ -95,6 +103,8 @@ Options:
   -a, --appimage <PATH>   Cursor AppImage path
   -p, --port <PORT>       Specify port number (optional, modifier will handle default)
   -s, --suffix <SUFFIX>   Specify domain suffix (default: .local)
+  -d, --domain <DOMAIN>   Replacement domain (mutually exclusive with --suffix)
+  --website-url [URL]     Custom login URL (optional value)
   --skip-hosts            Skip hosts file modification
   --debug                 Enable debug output
 
@@ -110,6 +120,9 @@ Examples:
 
   # Specify port and suffix
   $0 -a /path/to/cursor.appimage -p 443 -s .example.com
+
+  # Use domain replacement
+  $0 -a /path/to/cursor.appimage -d example.com
 
   # Skip hosts modification (manual DNS management)
   $0 -a /path/to/cursor.appimage --skip-hosts
@@ -129,7 +142,18 @@ show_info() {
     else
       echo "  端口: (使用默认)"
     fi
-    echo "  域名后缀: ${SUFFIX}"
+    if [ -n "${DOMAIN}" ]; then
+      echo "  域名: ${DOMAIN}"
+    else
+      echo "  域名后缀: ${SUFFIX}"
+    fi
+    if [ "${WEBSITE_URL_SET}" = true ]; then
+      if [ -n "${WEBSITE_URL}" ]; then
+        echo "  登录URL: ${WEBSITE_URL}"
+      else
+        echo "  登录URL: (使用默认)"
+      fi
+    fi
     echo "  跳过hosts修改: $([ "${SKIP_HOSTS}" = "true" ] && echo "是" || echo "否")"
     echo "  临时目录: ${TEMP_DIR}"
     echo "  备份目录: ${BACKUP_DIR}"
@@ -146,7 +170,18 @@ show_info() {
     else
       echo "  Port: (use default)"
     fi
-    echo "  Domain Suffix: ${SUFFIX}"
+    if [ -n "${DOMAIN}" ]; then
+      echo "  Domain: ${DOMAIN}"
+    else
+      echo "  Domain Suffix: ${SUFFIX}"
+    fi
+    if [ "${WEBSITE_URL_SET}" = true ]; then
+      if [ -n "${WEBSITE_URL}" ]; then
+        echo "  Website URL: ${WEBSITE_URL}"
+      else
+        echo "  Website URL: (use default)"
+      fi
+    fi
     echo "  Skip Hosts Modification: $([ "${SKIP_HOSTS}" = "true" ] && echo "Yes" || echo "No")"
     echo "  Temporary Directory: ${TEMP_DIR}"
     echo "  Backup Directory: ${BACKUP_DIR}"
@@ -242,7 +277,7 @@ init_lang() {
 
 # 解析命令行参数
 parse_params() {
-  options=$(getopt -o hl:a:p:s: --long help,lang:,appimage:,port:,suffix:,skip-hosts,debug -n "$(basename "$0")" -- "$@")
+  options=$(getopt -o hl:a:p:s:d: --long help,lang:,appimage:,port:,suffix:,domain:,website-url::,skip-hosts,debug -n "$(basename "$0")" -- "$@")
   if [ $? -ne 0 ]; then
     echo "Invalid options" >&2
     exit 1
@@ -280,6 +315,17 @@ parse_params() {
         SUFFIX="$2"
         shift 2
         ;;
+      -d|--domain)
+        DOMAIN="$2"
+        shift 2
+        ;;
+      --website-url)
+        WEBSITE_URL_SET=true
+        if [ -n "$2" ]; then
+          WEBSITE_URL="$2"
+        fi
+        shift 2
+        ;;
       --skip-hosts)
         SKIP_HOSTS=true
         shift
@@ -302,6 +348,16 @@ parse_params() {
   # 初始化语言
   LANG_CODE=${LANG_CODE:-$(detect_system_lang)}
   init_lang
+
+  # 检查 --domain 和自定义 --suffix 互斥
+  if [ -n "${DOMAIN}" ] && [ "${SUFFIX}" != ".local" ]; then
+    if [ "${LANG_CODE}" = "zh" ]; then
+      echo "错误：--domain 和 --suffix 不能同时使用"
+    else
+      echo "Error: --domain and --suffix are mutually exclusive"
+    fi
+    exit 1
+  fi
 
   # 检查 AppImage 路径
   if [ -z "${APPIMAGE_PATH}" ]; then
@@ -405,6 +461,44 @@ prepare() {
   debug_print "Environment prepared"
 }
 
+# 构建 modifier 命令
+build_modifier_cmd() {
+  local cursor_path="$1"
+  local extra_flags="$2"
+
+  local cmd="${MODIFIER_PATH} -C ${cursor_path}"
+  if [ "${DEBUG}" = true ]; then
+    cmd="${cmd} --debug"
+  fi
+  cmd="${cmd} apply"
+
+  if [ -n "${DOMAIN}" ]; then
+    cmd="${cmd} --domain ${DOMAIN}"
+  else
+    cmd="${cmd} --suffix ${SUFFIX}"
+  fi
+
+  if [ -n "${PORT}" ]; then
+    cmd="${cmd} -p ${PORT}"
+  fi
+  if [ "${SKIP_HOSTS}" = "true" ]; then
+    cmd="${cmd} --skip-hosts"
+  fi
+  if [ "${WEBSITE_URL_SET}" = true ]; then
+    if [ -n "${WEBSITE_URL}" ]; then
+      cmd="${cmd} --website-url ${WEBSITE_URL}"
+    else
+      cmd="${cmd} --website-url"
+    fi
+  fi
+
+  if [ -n "${extra_flags}" ]; then
+    cmd="${cmd} ${extra_flags}"
+  fi
+
+  echo "${cmd}"
+}
+
 # 处理AppImage文件，自动检测是恢复还是修补
 process_appimage() {
   echo "${MSG_FOUND_APPIMAGE} ${APPIMAGE_PATH}"
@@ -436,23 +530,12 @@ process_appimage() {
 
     echo "${MSG_UNPACKED_TO} ${TEMP_DIR}/squashfs-root"
 
-    local modifier_cmd="${MODIFIER_PATH}"
-    modifier_cmd="${modifier_cmd} --cursor-path ${TEMP_DIR}/squashfs-root/usr/share/cursor/resources/app"
-    modifier_cmd="${modifier_cmd} --scheme https"
-    modifier_cmd="${modifier_cmd} --suffix ${SUFFIX}"
-    modifier_cmd="${modifier_cmd} --confirm --pass-token"
+    local modifier_cmd=$(build_modifier_cmd "${TEMP_DIR}/squashfs-root/usr/share/cursor/resources/app" "-f --pass-token")
 
-    if [ -n "${PORT}" ]; then
-      modifier_cmd="${modifier_cmd} --port ${PORT}"
-    fi
     if [ "${SKIP_HOSTS}" = "true" ]; then
-      modifier_cmd="${modifier_cmd} --skip-hosts"
       SUDO=""
     else
       SUDO="sudo "
-    fi
-    if [ "${DEBUG}" = true ]; then
-      modifier_cmd="${modifier_cmd} --debug"
     fi
 
     debug_print "Executing with confirm: ${SUDO}${modifier_cmd}"
@@ -516,22 +599,12 @@ process_appimage() {
     # 使用modifier修补
     echo "${MSG_PATCHING_WITH_MODIFIER}"
 
-    local modifier_cmd="${MODIFIER_PATH}"
-    modifier_cmd="${modifier_cmd} --cursor-path ${TEMP_DIR}/squashfs-root/usr/share/cursor/resources/app"
-    modifier_cmd="${modifier_cmd} --scheme https"
-    modifier_cmd="${modifier_cmd} --suffix ${SUFFIX}"
+    local modifier_cmd=$(build_modifier_cmd "${TEMP_DIR}/squashfs-root/usr/share/cursor/resources/app" "")
 
-    if [ -n "${PORT}" ]; then
-      modifier_cmd="${modifier_cmd} --port ${PORT}"
-    fi
     if [ "${SKIP_HOSTS}" = "true" ]; then
-      modifier_cmd="${modifier_cmd} --skip-hosts"
       SUDO=""
     else
       SUDO="sudo "
-    fi
-    if [ "${DEBUG}" = true ]; then
-      modifier_cmd="${modifier_cmd} --debug"
     fi
 
     debug_print "Executing: ${SUDO}${modifier_cmd}"

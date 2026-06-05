@@ -2,9 +2,9 @@
 
 > **⚠️ تم أرشفة المشروع | Project Archived**
 >
-> لم يعد هذا المشروع قيد الصيانة. النسخة النهائية هي v0.3.4 (2025-11-08). شكراً لاهتمامك ودعمك.
+> لم يعد هذا المشروع قيد الصيانة. النسخة النهائية هي v0.3.5 (2026-04-26). شكراً لاهتمامك ودعمك.
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [简体中文](README.md) | [English](README.en.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [Español](README.es.md)
 
@@ -206,37 +206,61 @@ dbwriter manage remove <EMAIL>     # إزالة حساب
 ### 2. تصحيح Cursor (modifier)
 أغلق Cursor، طبق التصحيح (يجب إعادة التنفيذ بعد كل تحديث):
 ```bash
-# الاستخدام الأساسي (الكشف التلقائي عن مسار Cursor)
-/path/to/modifier --port 3000 --suffix .local
+# تطبيق التعديل (الأمر الفرعي: apply)
+# الطريقة 1: وضع استبدال النطاق (موصى به)
+modifier apply --domain your.domain -p 3000 --skip-hosts
+# الطريقة 2: وضع اللاحقة
+modifier apply --suffix .local -p 3000 --skip-hosts
 
 # تحديد مسار Cursor
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+modifier -C /path/to/cursor apply --domain your.domain
 
-# إعدادات HTTPS
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# مع تجاوز التحقق من الرمز
+modifier apply --domain your.domain -p 3000 --skip-hosts --pass-token
 
-# تخطي اكتشاف ملف hosts (إدارة hosts يدويًا)
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# رابط تسجيل دخول مخصص (للاستضافة الذاتية، الافتراضي https://{domain}{:port})
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# حفظ الأمر لإعادة الاستخدام
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# الاستعادة إلى الأصل (الأمر الفرعي: restore)
+modifier restore --skip-hosts
 
-# مثال كامل
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# التحقق من الحالة الحالية (الأمر الفرعي: status)
+modifier status
+
+# إعادة التطبيق بالقوة (عند وجود تعديل سابق أو العبث بالملفات)
+modifier apply --domain your.domain -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### معلمات الأمر
-| المعلمة | الاختصار | الوصف | مثال |
-|---------|----------|-------|------|
-| `--cursor-path` | `-C` | مسار تثبيت Cursor (اختياري، كشف تلقائي) | `/Applications/Cursor.app` |
-| `--scheme` | | نوع البروتوكول (http/https) | `https` |
-| `--port` | `-p` | منفذ الخدمة | `3000` |
-| `--suffix` | | لاحقة النطاق | `.local` |
-| `--skip-hosts` | | تخطي تعديل ملف hosts | - |
-| `--save-command` | `-s` | حفظ الأمر في ملف | `modifier.cmd` |
-| `--confirm` | | تأكيد التغييرات (عدم الاستعادة إذا كانت الحالة متطابقة) | - |
-| `--pass-token` | | تجاوز التحقق من الرمز (موصى به) | - |
-| `--debug` | | وضع التصحيح | - |
+
+**المعلمات العامة**
+| المعلمة | الاختصار | الوصف |
+|---------|----------|-------|
+| `--cursor-path` | `-C` | مسار تثبيت Cursor (اختياري، كشف تلقائي) |
+| `--debug` | | وضع التصحيح |
+
+**الأمر الفرعي: apply**
+| المعلمة | الاختصار | الوصف | ملاحظات |
+|---------|----------|-------|---------|
+| `--domain` | | نطاق الاستبدال | حصري متبادل مع `--suffix` |
+| `--suffix` | | لاحقة النطاق | حصري متبادل مع `--domain` |
+| `--port` | `-p` | المنفذ | اختياري |
+| `--skip-hosts` | | تخطي تعديل ملف hosts | |
+| `--pass-token` | | تجاوز التحقق من الرمز | |
+| `--website-url` | | رابط تسجيل دخول مخصص (الافتراضي `https://{domain}{:port}`) | قيمة اختيارية |
+| `--force` | `-f` | إعادة التطبيق بالقوة | |
+
+**الأمر الفرعي: restore**
+| المعلمة | الاختصار | الوصف |
+|---------|----------|-------|
+| `--skip-hosts` | | تخطي تعديل ملف hosts |
+| `--force` | `-f` | الاستعادة بالقوة (عند اكتشاف العبث أو عدم وجود تعديل) |
+
+**الأمر الفرعي: status**
+
+لا توجد معلمات إضافية. يعرض حالة التعديل الحالية وسلامة الملفات.
 
 ### ملاحظات خاصة بالمنصات
 - **Windows**: تنفيذ مباشر
@@ -248,10 +272,14 @@ dbwriter manage remove <EMAIL>     # إزالة حساب
 مرحب بمساهمات PR لتحسين نصوص تكييف المنصات!
 
 ### 3. إعداد Hosts
-إذا كنت تستخدم المعلمة `--skip-hosts`، أضف يدويًا سجلات المضيفين هذه:
+إذا كنت تستخدم المعلمة `--skip-hosts`، أضف يدويًا سجلات المضيفين. النطاقات المطلوبة تعتمد على الوضع المستخدم:
+
+**وضع اللاحقة** (`--suffix .local`):
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**وضع الاستبدال** (`--domain your.domain`): استبدل `cursor.sh` في النطاقات أعلاه بنطاقك.
 
 ### 4. بدء الخدمة
 ```bash

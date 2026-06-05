@@ -2,9 +2,9 @@
 
 > **⚠️ 项目已归档 | Project Archived**
 >
-> 本项目已停止维护，最后版本为 v0.3.4 (2025-11-08)。感谢您的关注和支持。
+> 本项目已停止维护，最后版本为 v0.3.5 (2026-04-26)。感谢您的关注和支持。
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [English](README.en.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [Español](README.es.md) | [العربية](README.ar.md)
 
@@ -206,37 +206,61 @@ dbwriter manage remove <EMAIL>     # 删除账号
 ### 2. 修补 Cursor (modifier)
 关闭 Cursor，执行修补（每次更新后需重新执行）：
 ```bash
-# 基本用法（自动检测Cursor路径）
-/path/to/modifier --port 3000 --suffix .local
+# 应用修改（子命令：apply）
+# 方式1：域名替换模式（推荐）
+modifier apply --domain your.domain -p 3000 --skip-hosts
+# 方式2：后缀模式
+modifier apply --suffix .local -p 3000 --skip-hosts
 
-# 指定Cursor路径
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+# 指定 Cursor 路径
+modifier -C /path/to/cursor apply --domain your.domain
 
-# HTTPS配置
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# 带 token bypass
+modifier apply --domain your.domain -p 3000 --skip-hosts --pass-token
 
-# 跳过hosts检测（手动管理hosts）
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# 自定义登录 URL（自建登录服务时使用，默认 https://{domain}{:port}）
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# 保存命令以便复用
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# 恢复原始状态（子命令：restore）
+modifier restore --skip-hosts
 
-# 完整示例
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# 查看当前状态（子命令：status）
+modifier status
+
+# 强制重新应用（已有修改或文件被篡改时）
+modifier apply --domain your.domain -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### 命令参数说明
-| 参数 | 简写 | 说明 | 示例 |
+
+**全局参数**
+| 参数 | 简写 | 说明 |
+|------|------|------|
+| `--cursor-path` | `-C` | Cursor 安装路径（可选，自动检测） |
+| `--debug` | | 调试模式 |
+
+**子命令：apply**
+| 参数 | 简写 | 说明 | 备注 |
 |------|------|------|------|
-| `--cursor-path` | `-C` | Cursor安装路径（可选，自动检测） | `/Applications/Cursor.app` |
-| `--scheme` | | 协议类型（http/https） | `https` |
-| `--port` | `-p` | 服务端口 | `3000` |
-| `--suffix` | | 域名后缀 | `.local` |
-| `--skip-hosts` | | 跳过hosts文件修改 | - |
-| `--save-command` | `-s` | 保存命令到文件 | `modifier.cmd` |
-| `--confirm` | | 确认修改（相同状态不恢复） | - |
-| `--pass-token` | | 过Token校验（建议开启） | - |
-| `--debug` | | 调试模式 | - |
+| `--domain` | | 替换域名 | 与 `--suffix` 互斥 |
+| `--suffix` | | 域名后缀 | 与 `--domain` 互斥 |
+| `--port` | `-p` | 端口 | 可选 |
+| `--skip-hosts` | | 跳过 hosts 文件修改 | |
+| `--pass-token` | | 过 Token 校验 | |
+| `--website-url` | | 自定义登录 URL（默认 `https://{domain}{:port}`） | 可选值 |
+| `--force` | `-f` | 强制重新应用 | |
+
+**子命令：restore**
+| 参数 | 简写 | 说明 |
+|------|------|------|
+| `--skip-hosts` | | 跳过 hosts 文件 |
+| `--force` | `-f` | 强制恢复（篡改检测或未检测到修改时） |
+
+**子命令：status**
+
+无额外参数，显示当前修改状态和文件完整性。
 
 ### 平台特别注意事项
 - **Windows**：直接执行即可
@@ -248,10 +272,14 @@ dbwriter manage remove <EMAIL>     # 删除账号
 欢迎提交 PR 改进平台适配脚本！
 
 ### 3. 配置 Hosts
-若使用 `--skip-hosts` 参数，需手动添加以下 hosts 记录：
+若使用 `--skip-hosts` 参数，需手动添加 hosts 记录。具体域名取决于使用的模式：
+
+**后缀模式** (`--suffix .local`)：
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**替换模式** (`--domain your.domain`)：将上述域名中的 `cursor.sh` 替换为你的域名。
 
 ### 4. 启动服务
 ```bash

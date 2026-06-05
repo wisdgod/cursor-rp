@@ -2,7 +2,7 @@
 
 > **⚠️ Project Archived**
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [简体中文](README.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [Español](README.es.md) | [العربية](README.ar.md)
 
@@ -204,37 +204,61 @@ dbwriter manage remove <EMAIL>     # Remove account
 ### 2. Patching Cursor (modifier)
 Close Cursor, apply patch (needs to be re-run after each update):
 ```bash
-# Basic usage (auto-detect Cursor path)
-/path/to/modifier --port 3000 --suffix .local
+# Apply modification (subcommand: apply)
+# Method 1: Domain replacement mode (recommended)
+modifier apply --domain your.domain -p 3000 --skip-hosts
+# Method 2: Suffix mode
+modifier apply --suffix .local -p 3000 --skip-hosts
 
 # Specify Cursor path
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+modifier -C /path/to/cursor apply --domain your.domain
 
-# HTTPS configuration
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# With token bypass
+modifier apply --domain your.domain -p 3000 --skip-hosts --pass-token
 
-# Skip hosts detection (manage hosts manually)
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# Custom login URL (for self-hosted login, defaults to https://{domain}{:port})
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# Save command for reuse
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# Restore to original (subcommand: restore)
+modifier restore --skip-hosts
 
-# Complete example
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# Check current status (subcommand: status)
+modifier status
+
+# Force re-apply (when already modified or files tampered)
+modifier apply --domain your.domain -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### Command Parameters
-| Parameter | Short | Description | Example |
-|-----------|-------|-------------|---------|
-| `--cursor-path` | `-C` | Cursor installation path (optional, auto-detect) | `/Applications/Cursor.app` |
-| `--scheme` | | Protocol type (http/https) | `https` |
-| `--port` | `-p` | Service port | `3000` |
-| `--suffix` | | Domain suffix | `.local` |
-| `--skip-hosts` | | Skip hosts file modification | - |
-| `--save-command` | `-s` | Save command to file | `modifier.cmd` |
-| `--confirm` | | Confirm changes (don't revert if identical state) | - |
-| `--pass-token` | | Pass token validation (recommended) | - |
-| `--debug` | | Debug mode | - |
+
+**Global Parameters**
+| Parameter | Short | Description |
+|-----------|-------|-------------|
+| `--cursor-path` | `-C` | Cursor installation path (optional, auto-detect) |
+| `--debug` | | Debug mode |
+
+**Subcommand: apply**
+| Parameter | Short | Description | Notes |
+|-----------|-------|-------------|-------|
+| `--domain` | | Replacement domain | Mutually exclusive with `--suffix` |
+| `--suffix` | | Domain suffix | Mutually exclusive with `--domain` |
+| `--port` | `-p` | Port | Optional |
+| `--skip-hosts` | | Skip hosts file modification | |
+| `--pass-token` | | Bypass token validation | |
+| `--website-url` | | Custom login URL (defaults to `https://{domain}{:port}`) | Optional value |
+| `--force` | `-f` | Force re-apply | |
+
+**Subcommand: restore**
+| Parameter | Short | Description |
+|-----------|-------|-------------|
+| `--skip-hosts` | | Skip hosts file |
+| `--force` | `-f` | Force restore (on tamper detection or no modification found) |
+
+**Subcommand: status**
+
+No additional parameters. Displays current modification status and file integrity.
 
 ### Platform-Specific Notes
 - **Windows**: Execute directly
@@ -246,10 +270,14 @@ Close Cursor, apply patch (needs to be re-run after each update):
 PR contributions to improve platform adaptation scripts are welcome!
 
 ### 3. Configure Hosts
-If using the `--skip-hosts` parameter, manually add these host records:
+If using the `--skip-hosts` parameter, manually add host records. The exact domains depend on the mode used:
+
+**Suffix mode** (`--suffix .local`):
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**Replace mode** (`--domain your.domain`): Replace `cursor.sh` in the above domains with your domain.
 
 ### 4. Start Service
 ```bash

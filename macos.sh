@@ -11,6 +11,9 @@ PORT=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 SKIP_HOSTS=false
 SUFFIX=".local"
+DOMAIN=""
+WEBSITE_URL=""
+WEBSITE_URL_SET=false
 TMP_PATH="${BASE_PATH}.tmp"
 BACKUP_PATH="${BASE_PATH}.bk.tar.gz"
 
@@ -44,6 +47,8 @@ show_help() {
   -l, --lang CODE         设置语言 (zh/en)
   -p, --port <PORT>       指定端口号 (可选，默认由 modifier 处理)
   -s, --suffix <SUFFIX>   指定域名后缀 (默认: .local)
+  -d, --domain <DOMAIN>   替换域名（与 --suffix 互斥）
+  --website-url [URL]     自定义登录 URL（可选值）
   --skip-hosts            跳过 hosts 文件修改
   --debug                 启用调试输出
 
@@ -60,6 +65,9 @@ show_help() {
   # 指定端口和后缀
   $0 -p 443 -s .example.com
 
+  # 使用完整域名替换
+  $0 -d api.example.com
+
   # 跳过 hosts 修改（手动管理域名解析）
   $0 --skip-hosts
 EOF
@@ -72,6 +80,8 @@ Options:
   -l, --lang CODE         Set language (zh/en)
   -p, --port <PORT>       Specify port number (optional, modifier will handle default)
   -s, --suffix <SUFFIX>   Specify domain suffix (default: .local)
+  -d, --domain <DOMAIN>   Replacement domain (mutually exclusive with --suffix)
+  --website-url [URL]     Custom login URL (optional value)
   --skip-hosts            Skip hosts file modification
   --debug                 Enable debug output
 
@@ -87,6 +97,9 @@ Examples:
 
   # Specify port and suffix
   $0 -p 443 -s .example.com
+
+  # Use full domain replacement
+  $0 -d api.example.com
 
   # Skip hosts modification (manual DNS management)
   $0 --skip-hosts
@@ -106,7 +119,20 @@ show_info() {
     else
       echo "  端口: (使用默认)"
     fi
-    echo "  域名后缀: ${SUFFIX}"
+    if [ -n "${DOMAIN}" ]; then
+      echo "  域名模式: 完整域名"
+      echo "  域名: ${DOMAIN}"
+    else
+      echo "  域名模式: 后缀"
+      echo "  域名后缀: ${SUFFIX}"
+    fi
+    if [ "${WEBSITE_URL_SET}" = true ]; then
+      if [ -n "${WEBSITE_URL}" ]; then
+        echo "  登录 URL: ${WEBSITE_URL}"
+      else
+        echo "  登录 URL: (使用默认)"
+      fi
+    fi
     echo "  跳过hosts修改: $([ "${SKIP_HOSTS}" = "true" ] && echo "是" || echo "否")"
     echo "  临时路径: ${TMP_PATH}"
     echo "  备份路径: ${BACKUP_PATH}"
@@ -123,7 +149,20 @@ show_info() {
     else
       echo "  Port: (use default)"
     fi
-    echo "  Domain Suffix: ${SUFFIX}"
+    if [ -n "${DOMAIN}" ]; then
+      echo "  Domain Mode: full domain"
+      echo "  Domain: ${DOMAIN}"
+    else
+      echo "  Domain Mode: suffix"
+      echo "  Domain Suffix: ${SUFFIX}"
+    fi
+    if [ "${WEBSITE_URL_SET}" = true ]; then
+      if [ -n "${WEBSITE_URL}" ]; then
+        echo "  Website URL: ${WEBSITE_URL}"
+      else
+        echo "  Website URL: (use default)"
+      fi
+    fi
     echo "  Skip Hosts Modification: $([ "${SKIP_HOSTS}" = "true" ] && echo "Yes" || echo "No")"
     echo "  Temporary Path: ${TMP_PATH}"
     echo "  Backup Path: ${BACKUP_PATH}"
@@ -249,6 +288,23 @@ parse_params() {
         SUFFIX="$2"
         shift 2
         ;;
+      -d|--domain)
+        if [ -z "$2" ] || [[ "$2" == -* ]]; then
+          echo "Error: --domain requires a value"
+          exit 1
+        fi
+        DOMAIN="$2"
+        shift 2
+        ;;
+      --website-url)
+        WEBSITE_URL_SET=true
+        if [ -n "$2" ] && [[ "$2" != -* ]]; then
+          WEBSITE_URL="$2"
+          shift 2
+        else
+          shift
+        fi
+        ;;
       --skip-hosts)
         SKIP_HOSTS=true
         shift
@@ -264,6 +320,15 @@ parse_params() {
         ;;
     esac
   done
+
+  # 验证 --domain 与 --suffix 互斥
+  if [ -n "${DOMAIN}" ] && [ "${SUFFIX}" != ".local" ]; then
+    echo "Error: --domain and --suffix are mutually exclusive"
+    exit 1
+  fi
+  if [ -n "${DOMAIN}" ]; then
+    SUFFIX=""
+  fi
 
   # 初始化语言
   LANG_CODE=${LANG_CODE:-$(detect_system_lang)}
@@ -321,6 +386,44 @@ EOF
   echo ""
 }
 
+# 构建 modifier 命令
+build_modifier_cmd() {
+  local cursor_path="$1"
+  local extra_flags="$2"  # e.g. "-f --pass-token"
+
+  local cmd="${MODIFIER_PATH} -C ${cursor_path}"
+  if [ "${DEBUG}" = true ]; then
+    cmd="${cmd} --debug"
+  fi
+  cmd="${cmd} apply"
+
+  if [ -n "${DOMAIN}" ]; then
+    cmd="${cmd} --domain ${DOMAIN}"
+  else
+    cmd="${cmd} --suffix ${SUFFIX}"
+  fi
+
+  if [ -n "${PORT}" ]; then
+    cmd="${cmd} -p ${PORT}"
+  fi
+  if [ "${SKIP_HOSTS}" = "true" ]; then
+    cmd="${cmd} --skip-hosts"
+  fi
+  if [ "${WEBSITE_URL_SET}" = true ]; then
+    if [ -n "${WEBSITE_URL}" ]; then
+      cmd="${cmd} --website-url ${WEBSITE_URL}"
+    else
+      cmd="${cmd} --website-url"
+    fi
+  fi
+
+  if [ -n "${extra_flags}" ]; then
+    cmd="${cmd} ${extra_flags}"
+  fi
+
+  echo "${cmd}"
+}
+
 # 修补应用
 patch_app() {
   echo "${MSG_PATCHING}"
@@ -348,21 +451,7 @@ patch_app() {
   codesign --remove-signature "${TMP_PATH}"
 
   # 构建 modifier 命令
-  local modifier_cmd="${MODIFIER_PATH}"
-  modifier_cmd="${modifier_cmd} --cursor-path ${TMP_PATH}/Contents/Resources/app"
-  modifier_cmd="${modifier_cmd} --scheme https"
-  modifier_cmd="${modifier_cmd} --suffix ${SUFFIX}"
-
-  # 添加可选参数
-  if [ -n "${PORT}" ]; then
-    modifier_cmd="${modifier_cmd} --port ${PORT}"
-  fi
-  if [ "${SKIP_HOSTS}" = "true" ]; then
-    modifier_cmd="${modifier_cmd} --skip-hosts"
-  fi
-  if [ "${DEBUG}" = true ]; then
-    modifier_cmd="${modifier_cmd} --debug"
-  fi
+  local modifier_cmd=$(build_modifier_cmd "${TMP_PATH}/Contents/Resources/app" "")
 
   # 使用 modifier 修补
   echo "${MSG_PATCHING_WITH_MODIFIER}"
@@ -419,21 +508,7 @@ process_app() {
   if [ -f "${BACKUP_PATH}" ]; then
     echo "${MSG_BACKUP_EXISTS}"
 
-    local modifier_cmd="${MODIFIER_PATH}"
-    modifier_cmd="${modifier_cmd} --cursor-path ${BASE_PATH}/Contents/Resources/app"
-    modifier_cmd="${modifier_cmd} --scheme https"
-    modifier_cmd="${modifier_cmd} --suffix ${SUFFIX}"
-    modifier_cmd="${modifier_cmd} --confirm --pass-token"
-
-    if [ -n "${PORT}" ]; then
-      modifier_cmd="${modifier_cmd} --port ${PORT}"
-    fi
-    if [ "${SKIP_HOSTS}" = "true" ]; then
-      modifier_cmd="${modifier_cmd} --skip-hosts"
-    fi
-    if [ "${DEBUG}" = true ]; then
-      modifier_cmd="${modifier_cmd} --debug"
-    fi
+    local modifier_cmd=$(build_modifier_cmd "${BASE_PATH}/Contents/Resources/app" "-f --pass-token")
 
     debug_print "Executing with confirm: ${modifier_cmd}"
 

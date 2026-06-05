@@ -2,9 +2,9 @@
 
 > **⚠️ Проект архивирован | Project Archived**
 >
-> Этот проект больше не поддерживается. Финальная версия — v0.3.4 (2025-11-08). Спасибо за ваше внимание и поддержку.
+> Этот проект больше не поддерживается. Финальная версия — v0.3.5 (2026-04-26). Спасибо за ваше внимание и поддержку.
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [简体中文](README.md) | [English](README.en.md) | [Français](README.fr.md) | [Español](README.es.md) | [العربية](README.ar.md)
 
@@ -206,37 +206,61 @@ dbwriter manage remove <EMAIL>     # Удалить учетную запись
 ### 2. Патчинг Cursor (modifier)
 Закройте Cursor, примените патч (требуется повторное выполнение после каждого обновления):
 ```bash
-# Базовое использование (автоопределение пути к Cursor)
-/path/to/modifier --port 3000 --suffix .local
+# Применение модификации (подкоманда: apply)
+# Способ 1: Режим замены домена (рекомендуется)
+modifier apply --domain your.domain -p 3000 --skip-hosts
+# Способ 2: Режим суффикса
+modifier apply --suffix .local -p 3000 --skip-hosts
 
 # Указание пути к Cursor
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+modifier -C /path/to/cursor apply --domain your.domain
 
-# HTTPS конфигурация
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# С обходом проверки токена
+modifier apply --domain your.domain -p 3000 --skip-hosts --pass-token
 
-# Пропуск проверки hosts (ручное управление hosts)
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# Пользовательский URL для входа (для самостоятельного хостинга, по умолчанию https://{domain}{:port})
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# Сохранение команды для повторного использования
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# Восстановление исходного состояния (подкоманда: restore)
+modifier restore --skip-hosts
 
-# Полный пример
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# Проверка текущего статуса (подкоманда: status)
+modifier status
+
+# Принудительное повторное применение (при наличии модификации или повреждении файлов)
+modifier apply --domain your.domain -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### Параметры команд
-| Параметр | Сокращение | Описание | Пример |
-|----------|------------|----------|--------|
-| `--cursor-path` | `-C` | Путь установки Cursor (опционально, автоопределение) | `/Applications/Cursor.app` |
-| `--scheme` | | Тип протокола (http/https) | `https` |
-| `--port` | `-p` | Порт сервиса | `3000` |
-| `--suffix` | | Суффикс домена | `.local` |
-| `--skip-hosts` | | Пропуск изменения файла hosts | - |
-| `--save-command` | `-s` | Сохранить команду в файл | `modifier.cmd` |
-| `--confirm` | | Подтверждение изменений (не восстанавливать, если состояние идентично) | - |
-| `--pass-token` | | Пропуск проверки токена (рекомендуется) | - |
-| `--debug` | | Режим отладки | - |
+
+**Глобальные параметры**
+| Параметр | Сокращение | Описание |
+|----------|------------|----------|
+| `--cursor-path` | `-C` | Путь установки Cursor (опционально, автоопределение) |
+| `--debug` | | Режим отладки |
+
+**Подкоманда: apply**
+| Параметр | Сокращение | Описание | Примечания |
+|----------|------------|----------|------------|
+| `--domain` | | Замена домена | Взаимоисключающий с `--suffix` |
+| `--suffix` | | Суффикс домена | Взаимоисключающий с `--domain` |
+| `--port` | `-p` | Порт | Опционально |
+| `--skip-hosts` | | Пропуск изменения файла hosts | |
+| `--pass-token` | | Обход проверки токена | |
+| `--website-url` | | Пользовательский URL для входа (по умолчанию `https://{domain}{:port}`) | Необязательное значение |
+| `--force` | `-f` | Принудительное повторное применение | |
+
+**Подкоманда: restore**
+| Параметр | Сокращение | Описание |
+|----------|------------|----------|
+| `--skip-hosts` | | Пропуск изменения файла hosts |
+| `--force` | `-f` | Принудительное восстановление (при обнаружении повреждений или отсутствии модификации) |
+
+**Подкоманда: status**
+
+Дополнительные параметры отсутствуют. Отображает текущий статус модификации и целостность файлов.
 
 ### Особенности для разных платформ
 - **Windows**: Выполняется непосредственно
@@ -248,10 +272,14 @@ dbwriter manage remove <EMAIL>     # Удалить учетную запись
 Приветствуются PR для улучшения скриптов адаптации к платформам!
 
 ### 3. Настройка Hosts
-При использовании параметра `--skip-hosts`, вручную добавьте эти записи в hosts:
+При использовании параметра `--skip-hosts`, вручную добавьте записи в hosts. Конкретные домены зависят от используемого режима:
+
+**Режим суффикса** (`--suffix .local`):
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**Режим замены** (`--domain your.domain`): Замените `cursor.sh` в вышеуказанных доменах на ваш домен.
 
 ### 4. Запуск сервиса
 ```bash

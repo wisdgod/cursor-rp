@@ -2,9 +2,9 @@
 
 > **⚠️ Projet archivé | Project Archived**
 >
-> Ce projet n'est plus maintenu. La version finale est v0.3.4 (2025-11-08). Merci pour votre attention et votre soutien.
+> Ce projet n'est plus maintenu. La version finale est v0.3.5 (2026-04-26). Merci pour votre attention et votre soutien.
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [简体中文](README.md) | [English](README.en.md) | [Русский](README.ru.md) | [Español](README.es.md) | [العربية](README.ar.md)
 
@@ -206,37 +206,61 @@ dbwriter manage remove <EMAIL>     # Supprimer un compte
 ### 2. Patcher Cursor (modifier)
 Fermez Cursor, appliquez le patch (à réexécuter après chaque mise à jour) :
 ```bash
-# Utilisation basique (détection automatique du chemin Cursor)
-/path/to/modifier --port 3000 --suffix .local
+# Appliquer la modification (sous-commande : apply)
+# Méthode 1 : Mode remplacement de domaine (recommandé)
+modifier apply --domain your.domain -p 3000 --skip-hosts
+# Méthode 2 : Mode suffixe
+modifier apply --suffix .local -p 3000 --skip-hosts
 
 # Spécifier le chemin Cursor
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+modifier -C /path/to/cursor apply --domain your.domain
 
-# Configuration HTTPS
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# Avec contournement de la validation du jeton
+modifier apply --domain your.domain -p 3000 --skip-hosts --pass-token
 
-# Ignorer la détection des hosts (gestion manuelle des hosts)
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# URL de connexion personnalisé (pour hébergement autonome, par défaut https://{domain}{:port})
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# Sauvegarder la commande pour réutilisation
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# Restaurer l'état original (sous-commande : restore)
+modifier restore --skip-hosts
 
-# Exemple complet
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# Vérifier l'état actuel (sous-commande : status)
+modifier status
+
+# Forcer la réapplication (si déjà modifié ou fichiers altérés)
+modifier apply --domain your.domain -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### Paramètres de commande
-| Paramètre | Abréviation | Description | Exemple |
-|-----------|-------------|-------------|---------|
-| `--cursor-path` | `-C` | Chemin d'installation de Cursor (optionnel, auto-détection) | `/Applications/Cursor.app` |
-| `--scheme` | | Type de protocole (http/https) | `https` |
-| `--port` | `-p` | Port de service | `3000` |
-| `--suffix` | | Suffixe de domaine | `.local` |
-| `--skip-hosts` | | Ignorer la modification du fichier hosts | - |
-| `--save-command` | `-s` | Sauvegarder la commande dans un fichier | `modifier.cmd` |
-| `--confirm` | | Confirmer les modifications (ne pas restaurer si état identique) | - |
-| `--pass-token` | | Passer la validation du jeton (recommandé) | - |
-| `--debug` | | Mode débogage | - |
+
+**Paramètres globaux**
+| Paramètre | Abréviation | Description |
+|-----------|-------------|-------------|
+| `--cursor-path` | `-C` | Chemin d'installation de Cursor (optionnel, auto-détection) |
+| `--debug` | | Mode débogage |
+
+**Sous-commande : apply**
+| Paramètre | Abréviation | Description | Remarques |
+|-----------|-------------|-------------|-----------|
+| `--domain` | | Domaine de remplacement | Mutuellement exclusif avec `--suffix` |
+| `--suffix` | | Suffixe de domaine | Mutuellement exclusif avec `--domain` |
+| `--port` | `-p` | Port | Optionnel |
+| `--skip-hosts` | | Ignorer la modification du fichier hosts | |
+| `--pass-token` | | Passer la validation du jeton | |
+| `--website-url` | | URL de connexion personnalisé (par défaut `https://{domain}{:port}`) | Valeur optionnelle |
+| `--force` | `-f` | Forcer la réapplication | |
+
+**Sous-commande : restore**
+| Paramètre | Abréviation | Description |
+|-----------|-------------|-------------|
+| `--skip-hosts` | | Ignorer le fichier hosts |
+| `--force` | `-f` | Forcer la restauration (en cas d'altération détectée ou d'absence de modification) |
+
+**Sous-commande : status**
+
+Aucun paramètre supplémentaire. Affiche l'état actuel de la modification et l'intégrité des fichiers.
 
 ### Notes spécifiques aux plateformes
 - **Windows** : Exécution directe
@@ -248,10 +272,14 @@ Fermez Cursor, appliquez le patch (à réexécuter après chaque mise à jour) :
 Les contributions PR pour améliorer les scripts d'adaptation aux plateformes sont les bienvenues !
 
 ### 3. Configurer les Hosts
-Si vous utilisez le paramètre `--skip-hosts`, ajoutez manuellement ces enregistrements hosts :
+Si vous utilisez le paramètre `--skip-hosts`, ajoutez manuellement les enregistrements hosts. Les domaines exacts dépendent du mode utilisé :
+
+**Mode suffixe** (`--suffix .local`) :
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**Mode remplacement** (`--domain your.domain`) : Remplacez `cursor.sh` dans les domaines ci-dessus par votre domaine.
 
 ### 4. Démarrer le service
 ```bash

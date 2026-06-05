@@ -2,9 +2,9 @@
 
 > **⚠️ Proyecto archivado | Project Archived**
 >
-> Este proyecto ya no se mantiene. La versión final es v0.3.4 (2025-11-08). Gracias por su atención y apoyo.
+> Este proyecto ya no se mantiene. La versión final es v0.3.5 (2026-04-26). Gracias por su atención y apoyo.
 >
-> This project is no longer maintained. The final version is v0.3.4 (2025-11-08). Thank you for your attention and support.
+> This project is no longer maintained. The final version is v0.3.5 (2026-04-26). Thank you for your attention and support.
 
 [简体中文](README.md) | [English](README.en.md) | [Русский](README.ru.md) | [Français](README.fr.md) | [العربية](README.ar.md)
 
@@ -206,37 +206,61 @@ dbwriter manage remove <EMAIL>     # Eliminar cuenta
 ### 2. Parchear Cursor (modifier)
 Cierre Cursor, aplique el parche (debe volver a ejecutarse después de cada actualización):
 ```bash
-# Uso básico (detección automática de la ruta de Cursor)
-/path/to/modifier --port 3000 --suffix .local
+# Aplicar modificación (subcomando: apply)
+# Método 1: Modo de reemplazo de dominio (recomendado)
+modifier apply --domain su.dominio -p 3000 --skip-hosts
+# Método 2: Modo de sufijo
+modifier apply --suffix .local -p 3000 --skip-hosts
 
 # Especificar ruta de Cursor
-/path/to/modifier --cursor-path /path/to/cursor --port 3000 --suffix .local
+modifier -C /ruta/a/cursor apply --domain su.dominio
 
-# Configuración HTTPS
-/path/to/modifier --scheme https --port 443 --suffix .example.com
+# Con bypass de token
+modifier apply --domain su.dominio -p 3000 --skip-hosts --pass-token
 
-# Omitir detección de hosts (gestión manual de hosts)
-/path/to/modifier --port 3000 --suffix .local --skip-hosts
+# URL de inicio de sesión personalizado (para hosting propio, por defecto https://{domain}{:port})
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url
+modifier apply --domain your.domain -p 3000 --skip-hosts --website-url https://login.custom.com
 
-# Guardar comando para reutilización
-/path/to/modifier --port 3000 --suffix .local --save-command modifier.cmd
+# Restaurar al original (subcomando: restore)
+modifier restore --skip-hosts
 
-# Ejemplo completo
-/path/to/modifier -C /path/to/cursor --scheme https -p 3000 --suffix .local --skip-hosts -s modifier.cmd --confirm --pass-token
+# Verificar estado actual (subcomando: status)
+modifier status
+
+# Forzar re-aplicación (cuando ya está modificado o archivos alterados)
+modifier apply --domain su.dominio -p 3000 --skip-hosts -f
+modifier restore --skip-hosts -f
 ```
 
 ### Parámetros de comandos
-| Parámetro | Abreviatura | Descripción | Ejemplo |
-|-----------|-------------|-------------|---------|
-| `--cursor-path` | `-C` | Ruta de instalación de Cursor (opcional, auto-detección) | `/Applications/Cursor.app` |
-| `--scheme` | | Tipo de protocolo (http/https) | `https` |
-| `--port` | `-p` | Puerto de servicio | `3000` |
-| `--suffix` | | Sufijo de dominio | `.local` |
-| `--skip-hosts` | | Omitir modificación del archivo hosts | - |
-| `--save-command` | `-s` | Guardar comando en archivo | `modifier.cmd` |
-| `--confirm` | | Confirmar cambios (no revertir si el estado es idéntico) | - |
-| `--pass-token` | | Pasar validación de token (recomendado) | - |
-| `--debug` | | Modo de depuración | - |
+
+**Parámetros globales**
+| Parámetro | Abreviatura | Descripción |
+|-----------|-------------|-------------|
+| `--cursor-path` | `-C` | Ruta de instalación de Cursor (opcional, auto-detección) |
+| `--debug` | | Modo de depuración |
+
+**Subcomando: apply**
+| Parámetro | Abreviatura | Descripción | Notas |
+|-----------|-------------|-------------|-------|
+| `--domain` | | Dominio de reemplazo | Mutuamente excluyente con `--suffix` |
+| `--suffix` | | Sufijo de dominio | Mutuamente excluyente con `--domain` |
+| `--port` | `-p` | Puerto | Opcional |
+| `--skip-hosts` | | Omitir modificación del archivo hosts | |
+| `--pass-token` | | Bypass de validación de token | |
+| `--website-url` | | URL de inicio de sesión personalizado (por defecto `https://{domain}{:port}`) | Valor opcional |
+| `--force` | `-f` | Forzar re-aplicación | |
+
+**Subcomando: restore**
+| Parámetro | Abreviatura | Descripción |
+|-----------|-------------|-------------|
+| `--skip-hosts` | | Omitir archivo hosts |
+| `--force` | `-f` | Forzar restauración (ante detección de alteración o sin modificación encontrada) |
+
+**Subcomando: status**
+
+Sin parámetros adicionales. Muestra el estado de modificación actual y la integridad de archivos.
 
 ### Notas específicas de plataforma
 - **Windows**: Ejecución directa
@@ -248,10 +272,14 @@ Cierre Cursor, aplique el parche (debe volver a ejecutarse después de cada actu
 ¡Las contribuciones PR para mejorar los scripts de adaptación de plataforma son bienvenidas!
 
 ### 3. Configurar Hosts
-Si usa el parámetro `--skip-hosts`, agregue manualmente estos registros de hosts:
+Si usa el parámetro `--skip-hosts`, agregue manualmente los registros de hosts. Los dominios exactos dependen del modo utilizado:
+
+**Modo de sufijo** (`--suffix .local`):
 ```
-127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local repo42.cursor.sh.local api4.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local
+127.0.0.1 api2.cursor.sh.local api3.cursor.sh.local api4.cursor.sh.local repo42.cursor.sh.local us-asia.gcpp.cursor.sh.local us-eu.gcpp.cursor.sh.local us-only.gcpp.cursor.sh.local agent.api5.cursor.sh.local agentn.api5.cursor.sh.local agent-gcpp-uswest.api5.cursor.sh.local agentn-gcpp-uswest.api5.cursor.sh.local agent-gcpp-eucentral.api5.cursor.sh.local agentn-gcpp-eucentral.api5.cursor.sh.local agent-gcpp-apsoutheast.api5.cursor.sh.local agentn-gcpp-apsoutheast.api5.cursor.sh.local
 ```
+
+**Modo de reemplazo** (`--domain su.dominio`): Reemplace `cursor.sh` en los dominios anteriores con su dominio.
 
 ### 4. Iniciar el servicio
 ```bash
